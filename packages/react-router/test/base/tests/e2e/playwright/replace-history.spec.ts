@@ -195,6 +195,43 @@ test.describe('Replace History Entries', () => {
   });
 
   /**
+   * A replace to the previous pathname with another query has no back button
+   * target, but browser back still returns through the earlier entries.
+   *
+   * Flow: home -> page1 -> push page2 -> push page4 -> replace page2?from=replace -> browser back x2 -> page1
+   */
+  test('replace to the previous pathname should keep the pages browser back returns to', async ({ page }) => {
+    const page1 = page.locator('div.ion-page[data-pageid="page1"]');
+
+    await page.goto(withTestingMode('/'));
+    await ionPageVisible(page, 'home');
+
+    await ionNav(page, 'ion-item', 'Replace Action');
+    await ionPageVisible(page, 'page1');
+    await page1.evaluate((el) => el.setAttribute('data-marker', 'page1'));
+
+    await page.locator('#go-to-page2').click();
+    await ionPageVisible(page, 'page2');
+    await page.locator('#go-to-page4').click();
+    await ionPageVisible(page, 'page4');
+
+    await page.locator('#replace-to-page2-query').click();
+    await ionPageVisible(page, 'page2');
+    await expect(page).toHaveURL(/\/replace-action\/page2\?from=replace/);
+    // Let the deferred unmounts run before checking which pages are left.
+    await page.waitForTimeout(500);
+    await ionPageDoesNotExist(page, 'page4');
+    await ionPageHidden(page, 'page1');
+
+    await ionGoBack(page);
+    await expect(page).toHaveURL(/\/replace-action\/page2$/);
+    await ionPageVisible(page, 'page2');
+    await ionGoBack(page, '/replace-action/page1');
+    await ionPageVisible(page, 'page1');
+    await expect(page1).toHaveAttribute('data-marker', 'page1');
+  });
+
+  /**
    * Back in another tab can drop a page from the global history while the
    * page's own tab history still holds it. Back uses the tab history first,
    * so the page stays mounted after a replace.

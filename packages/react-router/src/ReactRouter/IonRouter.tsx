@@ -99,6 +99,14 @@ const getBackHistoryPathnames = (history: LocationHistory): string[] => {
   let routeInfo = copy.current();
   // Each step pops an entry, so this bounds the loop.
   let steps = copy['locationHistory'].length + Object.values(tabHistory).reduce((n, ris) => n + ris.length, 0);
+  // A replace to the previous pathname gets no pushedByRoute, but browser back
+  // still returns through the previous entry, so start the walk there.
+  const previous = copy['locationHistory'][copy['locationHistory'].length - 2];
+  if (routeInfo?.routeAction === 'replace' && !routeInfo.pushedByRoute && previous?.pathname === routeInfo.pathname) {
+    pathnames.push(previous.pathname);
+    copy.add({ ...previous, routeAction: 'pop', routeDirection: 'back' });
+    routeInfo = previous;
+  }
   while (routeInfo?.pushedByRoute && steps-- > 0) {
     const prevInfo = copy.findLastLocation(routeInfo);
     if (!prevInfo) {
