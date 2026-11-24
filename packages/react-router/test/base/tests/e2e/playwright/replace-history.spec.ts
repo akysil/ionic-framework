@@ -6,6 +6,7 @@ import {
   ionBackClick,
   ionNav,
   ionGoBack,
+  ionTabClick,
   withTestingMode,
 } from './utils/test-utils';
 
@@ -183,6 +184,78 @@ test.describe('Replace History Entries', () => {
     }
     await ionPageVisible(page, 'page1');
     await expect(page.locator('div.ion-page[data-pageid="page1"]')).toHaveAttribute('data-marker', 'page1');
+  });
+
+  /**
+   * Back in another tab can drop a page from the global history while the
+   * page's own tab history still holds it. Back uses the tab history first,
+   * so the page stays mounted after a replace.
+   *
+   * Flow: b1 -> b2 -> b3 -> tab A -> a2 -> a3 -> tab B -> back x2 -> tab A -> a4 -> replace a5 -> back -> a3 -> back -> a2
+   */
+  test('replace should keep sibling pages mounted that tab history can return to', async ({ page }) => {
+    const pageLocator = (pageId: string) => page.locator(`div.ion-page[data-pageid="replace-tabs-${pageId}"]`);
+
+    await page.goto(withTestingMode('/replace-tabs/b'));
+    await ionPageVisible(page, 'replace-tabs-b1');
+    await page.locator('#go-to-b2').click();
+    await ionPageVisible(page, 'replace-tabs-b2');
+    await page.locator('#go-to-b3').click();
+    await ionPageVisible(page, 'replace-tabs-b3');
+
+    await ionTabClick(page, 'Tab A');
+    await ionPageVisible(page, 'replace-tabs-a1');
+    await page.locator('#go-to-a2').click();
+    await ionPageVisible(page, 'replace-tabs-a2');
+    await pageLocator('a2').evaluate((el) => el.setAttribute('data-marker', 'a2'));
+    await page.locator('#go-to-a3').click();
+    await ionPageVisible(page, 'replace-tabs-a3');
+
+    await ionTabClick(page, 'Tab B');
+    await ionPageVisible(page, 'replace-tabs-b3');
+    await ionBackClick(page, 'replace-tabs-b3');
+    await ionPageVisible(page, 'replace-tabs-b2');
+    await ionBackClick(page, 'replace-tabs-b2');
+    await ionPageVisible(page, 'replace-tabs-b1');
+
+    await ionTabClick(page, 'Tab A');
+    await ionPageVisible(page, 'replace-tabs-a3');
+    await page.locator('#go-to-a4').click();
+    await ionPageVisible(page, 'replace-tabs-a4');
+    await page.locator('#replace-to-a5').click();
+    await ionPageVisible(page, 'replace-tabs-a5');
+    await ionPageDoesNotExist(page, 'replace-tabs-a4');
+    await ionPageHidden(page, 'replace-tabs-a2');
+
+    await ionBackClick(page, 'replace-tabs-a5');
+    await ionPageVisible(page, 'replace-tabs-a3');
+    await ionBackClick(page, 'replace-tabs-a3');
+    await ionPageVisible(page, 'replace-tabs-a2');
+    await expect(pageLocator('a2')).toHaveAttribute('data-marker', 'a2');
+  });
+
+  /**
+   * A forward push to a <Navigate replace> route replaces only the redirect
+   * entry, so the page that pushed it stays mounted.
+   *
+   * Flow: a1 -> push a2 -> push a/redirect-3 -> redirect a3 -> back -> a2
+   */
+  test('redirect after a forward push should keep the pushing page mounted', async ({ page }) => {
+    const a2 = page.locator('div.ion-page[data-pageid="replace-tabs-a2"]');
+
+    await page.goto(withTestingMode('/replace-tabs/a'));
+    await ionPageVisible(page, 'replace-tabs-a1');
+    await page.locator('#go-to-a2').click();
+    await ionPageVisible(page, 'replace-tabs-a2');
+    await a2.evaluate((el) => el.setAttribute('data-marker', 'a2'));
+
+    await page.locator('#redirect-to-a3').click();
+    await ionPageVisible(page, 'replace-tabs-a3');
+    await ionPageHidden(page, 'replace-tabs-a2');
+
+    await ionBackClick(page, 'replace-tabs-a3');
+    await ionPageVisible(page, 'replace-tabs-a2');
+    await expect(a2).toHaveAttribute('data-marker', 'a2');
   });
 
   /**

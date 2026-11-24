@@ -803,9 +803,14 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
       for (const pathname of context.getBackHistoryPathnames?.() ?? []) {
         backHistoryViewItems.add(this.context.findViewItemByPathname(pathname, this.id));
       }
-      // When the replaced entry is a <Navigate> redirect, the page that navigated
-      // to it is the one being replaced (as in findViewItems), so it is not kept.
-      if (routeInfo.prevRouteLastPathname && isNavigateElement(leavingViewItem?.reactElement?.props?.element)) {
+      // When the replaced entry is a <Navigate> redirect reached without a forward
+      // push, the page that navigated to it is the one being replaced (as in
+      // findViewItems), so it is not kept.
+      if (
+        routeInfo.prevRouteLastPathname &&
+        isNavigateElement(leavingViewItem?.reactElement?.props?.element) &&
+        this.prevProps?.routeInfo.routeDirection !== 'forward'
+      ) {
         backHistoryViewItems.delete(this.context.findViewItemByPathname(routeInfo.prevRouteLastPathname, this.id));
       }
     }

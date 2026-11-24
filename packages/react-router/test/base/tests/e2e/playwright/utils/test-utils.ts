@@ -187,9 +187,7 @@ export async function ionTabClick(page: Page, tabText: string): Promise<void> {
  * Equivalent to Cypress `cy.ionMenuClick()`.
  */
 export async function ionMenuClick(page: Page): Promise<void> {
-  const menuButton = page.locator('ion-menu-button').first();
-  await menuButton.waitFor({ state: 'visible' });
-  await menuButton.click({ force: true });
+  await page.locator('ion-menu-button').first().click({ force: true });
   await page.waitForTimeout(500);
 }
 
