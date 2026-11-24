@@ -177,32 +177,6 @@ export class LocationHistory {
     return undefined;
   }
 
-  /**
-   * Returns the pathnames that back navigation can still return to from the
-   * current route, nearest first. Replays back navigation (`findLastLocation`,
-   * then a pop) on a copy of the history, so tab history is searched first and
-   * a pathname that appears more than once does not hide older entries.
-   */
-  getBackHistoryPathnames() {
-    const history = new LocationHistory();
-    history.locationHistory = [...this.locationHistory];
-    Object.keys(this.tabHistory).forEach((tab) => (history.tabHistory[tab] = [...this.tabHistory[tab]]));
-    const pathnames: string[] = [];
-    let routeInfo = history.current();
-    // Each step pops an entry, so this bounds the loop.
-    let steps = this.locationHistory.length + Object.values(this.tabHistory).reduce((n, ris) => n + ris.length, 0);
-    while (routeInfo?.pushedByRoute && steps-- > 0) {
-      const prevInfo = history.findLastLocation(routeInfo);
-      if (!prevInfo) {
-        break;
-      }
-      pathnames.push(prevInfo.pathname);
-      history._pop(prevInfo);
-      routeInfo = prevInfo;
-    }
-    return pathnames;
-  }
-
   previous() {
     return (
       this.locationHistory[this.locationHistory.length - 2] || this.locationHistory[this.locationHistory.length - 1]

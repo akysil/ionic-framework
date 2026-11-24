@@ -84,6 +84,7 @@ const App: React.FC = () => {
           <Route path="/replace-action/page2" element={<Page2 />} />
           <Route path="/replace-action/page3" element={<Page3 />} />
           <Route path="/replace-action/page4" element={<Page4 />} />
+          <Route path="/replace-action/alias" element={<Navigate to="/replace-action/page3" replace />} />
           <Route path="/replace-action" element={<Navigate to="/replace-action/page1" replace />} />
           <Route path="/replace-tabs/*" element={<ReplaceTabs />} />
           <Route path="/tab-context/*" element={<TabsContext />} />

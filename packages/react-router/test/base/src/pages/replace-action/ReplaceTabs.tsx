@@ -44,11 +44,6 @@ const Page: React.FC<{ tab: string; step: number; last?: boolean }> = ({ tab, st
             Replace with next
           </IonButton>
         )}
-        {tab === 'a' && step === 2 && (
-          <IonButton id="redirect-to-a3" routerLink="/replace-tabs/a/redirect-3">
-            Next through a redirect
-          </IonButton>
-        )}
       </IonContent>
     </IonPage>
   );
@@ -63,7 +58,6 @@ const ReplaceTabs: React.FC = () => (
       <Route path="/replace-tabs/a/3" element={<Page tab="a" step={3} />} />
       <Route path="/replace-tabs/a/4" element={<Page tab="a" step={4} />} />
       <Route path="/replace-tabs/a/5" element={<Page tab="a" step={5} last />} />
-      <Route path="/replace-tabs/a/redirect-3" element={<Navigate to="/replace-tabs/a/3" replace />} />
       <Route path="/replace-tabs/b" element={<Page tab="b" step={1} />} />
       <Route path="/replace-tabs/b/2" element={<Page tab="b" step={2} />} />
       <Route path="/replace-tabs/b/3" element={<Page tab="b" step={3} last />} />

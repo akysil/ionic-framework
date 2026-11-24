@@ -150,11 +150,13 @@ test.describe('Replace History Entries', () => {
 
   /**
    * A pathname that appears twice in the back history does not hide the
-   * pages before it.
+   * pages before it. The replaced page4 view also serves the older page4
+   * entry, so it stays mounted too.
    *
    * Flow: home -> page1 -> push page2 -> push page4 -> push page2 -> push page4 -> replace page3 -> back x4 -> page1
    */
   test('replace should keep sibling pages mounted when a pathname repeats in back history', async ({ page }) => {
+    const pageLocator = (pageId: string) => page.locator(`div.ion-page[data-pageid="${pageId}"]`);
     const visiblePage = (pageId: string) => page.locator(`div.ion-page[data-pageid="${pageId}"]:not(.ion-page-hidden)`);
 
     await page.goto(withTestingMode('/'));
@@ -162,12 +164,13 @@ test.describe('Replace History Entries', () => {
 
     await ionNav(page, 'ion-item', 'Replace Action');
     await ionPageVisible(page, 'page1');
-    await page.locator('div.ion-page[data-pageid="page1"]').evaluate((el) => el.setAttribute('data-marker', 'page1'));
+    await pageLocator('page1').evaluate((el) => el.setAttribute('data-marker', 'page1'));
 
     await page.locator('#go-to-page2').click();
     await expect(visiblePage('page2')).toBeVisible();
     await visiblePage('page2').locator('#go-to-page4').click();
     await expect(visiblePage('page4')).toBeVisible();
+    await pageLocator('page4').evaluate((el) => el.setAttribute('data-marker', 'page4'));
     await visiblePage('page4').locator('#go-to-page2-again').click();
     await expect(visiblePage('page2')).toBeVisible();
     await visiblePage('page2').locator('#go-to-page4').click();
@@ -175,15 +178,20 @@ test.describe('Replace History Entries', () => {
 
     await visiblePage('page4').locator('#replace-to-page3').click();
     await ionPageVisible(page, 'page3');
+    // Let the deferred unmounts run before checking which pages are left.
     await page.waitForTimeout(500);
     await ionPageHidden(page, 'page1');
+    await ionPageHidden(page, 'page4');
 
     for (const pageId of ['page3', 'page2', 'page4', 'page2']) {
       await expect(visiblePage(pageId)).toBeVisible();
+      if (pageId === 'page4') {
+        await expect(pageLocator('page4')).toHaveAttribute('data-marker', 'page4');
+      }
       await visiblePage(pageId).locator('ion-back-button').click();
     }
     await ionPageVisible(page, 'page1');
-    await expect(page.locator('div.ion-page[data-pageid="page1"]')).toHaveAttribute('data-marker', 'page1');
+    await expect(pageLocator('page1')).toHaveAttribute('data-marker', 'page1');
   });
 
   /**
@@ -225,6 +233,8 @@ test.describe('Replace History Entries', () => {
     await page.locator('#replace-to-a5').click();
     await ionPageVisible(page, 'replace-tabs-a5');
     await ionPageDoesNotExist(page, 'replace-tabs-a4');
+    // Let the deferred sibling cleanup run before checking that a2 is still there.
+    await page.waitForTimeout(500);
     await ionPageHidden(page, 'replace-tabs-a2');
 
     await ionBackClick(page, 'replace-tabs-a5');
@@ -238,24 +248,29 @@ test.describe('Replace History Entries', () => {
    * A forward push to a <Navigate replace> route replaces only the redirect
    * entry, so the page that pushed it stays mounted.
    *
-   * Flow: a1 -> push a2 -> push a/redirect-3 -> redirect a3 -> back -> a2
+   * Flow: home -> page1 -> push page2 -> push alias -> redirect page3 -> back -> page2
    */
   test('redirect after a forward push should keep the pushing page mounted', async ({ page }) => {
-    const a2 = page.locator('div.ion-page[data-pageid="replace-tabs-a2"]');
+    const page2 = page.locator('div.ion-page[data-pageid="page2"]');
 
-    await page.goto(withTestingMode('/replace-tabs/a'));
-    await ionPageVisible(page, 'replace-tabs-a1');
-    await page.locator('#go-to-a2').click();
-    await ionPageVisible(page, 'replace-tabs-a2');
-    await a2.evaluate((el) => el.setAttribute('data-marker', 'a2'));
+    await page.goto(withTestingMode('/'));
+    await ionPageVisible(page, 'home');
 
-    await page.locator('#redirect-to-a3').click();
-    await ionPageVisible(page, 'replace-tabs-a3');
-    await ionPageHidden(page, 'replace-tabs-a2');
+    await ionNav(page, 'ion-item', 'Replace Action');
+    await ionPageVisible(page, 'page1');
+    await page.locator('#go-to-page2').click();
+    await ionPageVisible(page, 'page2');
+    await page2.evaluate((el) => el.setAttribute('data-marker', 'page2'));
 
-    await ionBackClick(page, 'replace-tabs-a3');
-    await ionPageVisible(page, 'replace-tabs-a2');
-    await expect(a2).toHaveAttribute('data-marker', 'a2');
+    await page.locator('#go-to-alias').click();
+    await ionPageVisible(page, 'page3');
+    // Let the deferred unmounts run before checking that page2 is still there.
+    await page.waitForTimeout(500);
+    await ionPageHidden(page, 'page2');
+
+    await ionBackClick(page, 'page3');
+    await ionPageVisible(page, 'page2');
+    await expect(page2).toHaveAttribute('data-marker', 'page2');
   });
 
   /**

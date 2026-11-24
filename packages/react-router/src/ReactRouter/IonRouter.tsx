@@ -82,6 +82,35 @@ const checkIsMultiStepBack = (
   return false;
 };
 
+/**
+ * Returns the pathnames that back navigation can still return to, nearest
+ * first. Replays back navigation (findLastLocation, then a pop) on a copy of
+ * the history, so tab history is searched first and a pathname that appears
+ * more than once does not hide older entries.
+ */
+const getBackHistoryPathnames = (history: LocationHistory): string[] => {
+  // The history arrays are private to LocationHistory; copy them so the walk
+  // does not change the real history.
+  const copy = new LocationHistory();
+  const tabHistory: Record<string, RouteInfo[]> = history['tabHistory'];
+  copy['locationHistory'] = [...history['locationHistory']];
+  Object.keys(tabHistory).forEach((tab) => (copy['tabHistory'][tab] = [...tabHistory[tab]]));
+  const pathnames: string[] = [];
+  let routeInfo = copy.current();
+  // Each step pops an entry, so this bounds the loop.
+  let steps = copy['locationHistory'].length + Object.values(tabHistory).reduce((n, ris) => n + ris.length, 0);
+  while (routeInfo?.pushedByRoute && steps-- > 0) {
+    const prevInfo = copy.findLastLocation(routeInfo);
+    if (!prevInfo) {
+      break;
+    }
+    pathnames.push(prevInfo.pathname);
+    copy.add({ ...prevInfo, routeAction: 'pop', routeDirection: 'back' });
+    routeInfo = prevInfo;
+  }
+  return pathnames;
+};
+
 export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildren<IonRouterProps>) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -698,7 +727,7 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
     findViewItemByPathname: viewStack.current.findViewItemByPathname,
     getChildrenToRender: viewStack.current.getChildrenToRender,
     getViewItemsForOutlet: viewStack.current.getViewItemsForOutlet.bind(viewStack.current),
-    getBackHistoryPathnames: () => locationHistory.current.getBackHistoryPathnames(),
+    getBackHistoryPathnames: () => getBackHistoryPathnames(locationHistory.current),
     goBack: () => handleNavigateBack(),
     createViewItem: viewStack.current.createViewItem,
     findViewItemByRouteInfo: viewStack.current.findViewItemByRouteInfo,

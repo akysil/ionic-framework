@@ -50,6 +50,7 @@ const Page2: React.FC = () => {
       <IonContent>
         <IonButton id="go-to-page3" onClick={() => clickButton()}>Goto Page3</IonButton>
         <IonButton id="go-to-page4" routerLink={'/replace-action/page4'}>Goto Page4</IonButton>
+        <IonButton id="go-to-alias" routerLink={'/replace-action/alias'}>Goto Page3 through a redirect</IonButton>
       </IonContent>
     </IonPage>
   );

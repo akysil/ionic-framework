@@ -177,51 +177,6 @@ describe('LocationHistory', () => {
         expect((locationHistory as any).locationHistory[2].pathname).toEqual('/tab1/details/3');
       });
     });
-
-    describe('page1 > page2 > page4 > page2 > page5, Replace to page3', () => {
-      beforeEach(() => {
-        const page1Route = createRoute('/page1');
-        const page2Route = createRoute('/page2', page1Route);
-        const page4Route = createRoute('/page4', page2Route);
-        const page2AgainRoute = createRoute('/page2', page4Route);
-        const page5Route = createRoute('/page5', page2AgainRoute);
-        const page3Route = createRoute('/page3', page2AgainRoute, undefined, 'replace');
-        locationHistory.add(page1Route);
-        locationHistory.add(page2Route);
-        locationHistory.add(page4Route);
-        locationHistory.add(page2AgainRoute);
-        locationHistory.add(page5Route);
-        locationHistory.add(page3Route);
-      });
-
-      it('back history should include the entries before the repeated pathname', () => {
-        expect(locationHistory.getBackHistoryPathnames()).toEqual(['/page2', '/page4', '/page2', '/page1']);
-      });
-    });
-
-    describe('b1 > b2 > b3 > tab a1 > a2 > a3 > tab b3 > back x2 > tab a3 > a4, Replace to a5', () => {
-      beforeEach(() => {
-        const b1 = createRoute('/b1', undefined, 'b');
-        const b2 = createRoute('/b2', b1, 'b');
-        const b3 = createRoute('/b3', b2, 'b');
-        const a1 = createRoute('/a1', undefined, 'a');
-        const a2 = createRoute('/a2', a1, 'a');
-        const a3 = createRoute('/a3', a2, 'a');
-        [b1, b2, b3, a1, a2, a3].forEach((ri) => locationHistory.add(ri));
-        locationHistory.add({ ...b3, routeDirection: 'none' });
-        locationHistory.add({ ...b2, routeAction: 'pop', routeDirection: 'back' });
-        locationHistory.add({ ...b1, routeAction: 'pop', routeDirection: 'back' });
-        locationHistory.add({ ...a3, routeDirection: 'none' });
-        const a4 = createRoute('/a4', a3, 'a');
-        locationHistory.add(a4);
-        locationHistory.add(createRoute('/a5', a3, 'a', 'replace'));
-      });
-
-      it('back history should include the tab entries that global history no longer has', () => {
-        expect(locationHistory.findLastLocationByPathname('/a2')).toBeUndefined();
-        expect(locationHistory.getBackHistoryPathnames()).toEqual(['/a3', '/a2', '/a1']);
-      });
-    });
   });
 
   function currentRoute() {
