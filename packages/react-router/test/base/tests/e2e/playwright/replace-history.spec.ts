@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
   ionPageVisible,
+  ionPageHidden,
   ionPageDoesNotExist,
   ionBackClick,
   ionNav,
@@ -79,6 +80,71 @@ test.describe('Replace History Entries', () => {
     const url = page.url();
     expect(url).not.toContain('/replace-action/page1');
     await ionPageVisible(page, 'home');
+  });
+
+  /**
+   * A replace removes only the replaced page. Sibling pages that back can still
+   * return to stay mounted, so back shows the same page instead of a new copy.
+   *
+   * Flow: home -> page1 -> push page2 -> replace page3 -> IonBackButton -> page1
+   */
+  test('replace should keep the sibling page in back history mounted', async ({ page }) => {
+    await page.goto(withTestingMode('/'));
+    await ionPageVisible(page, 'home');
+
+    await ionNav(page, 'ion-item', 'Replace Action');
+    await ionPageVisible(page, 'page1');
+    await page.locator('div.ion-page[data-pageid="page1"]').evaluate((el) => el.setAttribute('data-marker', 'page1'));
+
+    await page.locator('#go-to-page2').click();
+    await ionPageVisible(page, 'page2');
+
+    await page.locator('#go-to-page3').click();
+    await ionPageVisible(page, 'page3');
+    await ionPageDoesNotExist(page, 'page2');
+    await page.waitForTimeout(500);
+    await ionPageHidden(page, 'page1');
+
+    await ionBackClick(page, 'page3');
+    await ionPageVisible(page, 'page1');
+    await expect(page.locator('div.ion-page[data-pageid="page1"]')).toHaveAttribute('data-marker', 'page1');
+  });
+
+  /**
+   * Every page in the back history stays mounted after a replace, not only the
+   * page that pushed the replaced one.
+   *
+   * Flow: home -> page1 -> push page2 -> push page4 -> replace page3 -> back -> page2 -> back -> page1
+   */
+  test('replace should keep every sibling page in back history mounted', async ({ page }) => {
+    await page.goto(withTestingMode('/'));
+    await ionPageVisible(page, 'home');
+
+    await ionNav(page, 'ion-item', 'Replace Action');
+    await ionPageVisible(page, 'page1');
+    await page.locator('div.ion-page[data-pageid="page1"]').evaluate((el) => el.setAttribute('data-marker', 'page1'));
+
+    await page.locator('#go-to-page2').click();
+    await ionPageVisible(page, 'page2');
+    await page.locator('div.ion-page[data-pageid="page2"]').evaluate((el) => el.setAttribute('data-marker', 'page2'));
+
+    await page.locator('#go-to-page4').click();
+    await ionPageVisible(page, 'page4');
+
+    await page.locator('#replace-to-page3').click();
+    await ionPageVisible(page, 'page3');
+    await ionPageDoesNotExist(page, 'page4');
+    await page.waitForTimeout(500);
+    await ionPageHidden(page, 'page1');
+    await ionPageHidden(page, 'page2');
+
+    await ionBackClick(page, 'page3');
+    await ionPageVisible(page, 'page2');
+    await expect(page.locator('div.ion-page[data-pageid="page2"]')).toHaveAttribute('data-marker', 'page2');
+
+    await ionBackClick(page, 'page2');
+    await ionPageVisible(page, 'page1');
+    await expect(page.locator('div.ion-page[data-pageid="page1"]')).toHaveAttribute('data-marker', 'page1');
   });
 
   /**

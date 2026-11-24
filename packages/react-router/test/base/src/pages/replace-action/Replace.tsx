@@ -49,6 +49,29 @@ const Page2: React.FC = () => {
       </IonHeader>
       <IonContent>
         <IonButton id="go-to-page3" onClick={() => clickButton()}>Goto Page3</IonButton>
+        <IonButton id="go-to-page4" routerLink={'/replace-action/page4'}>Goto Page4</IonButton>
+      </IonContent>
+    </IonPage>
+  );
+};
+
+const Page4: React.FC = () => {
+  const ionRouter = useIonRouter();
+
+  return (
+    <IonPage data-pageid="page4">
+      <IonHeader>
+        <IonToolbar>
+          <IonButtons slot="start">
+            <IonBackButton />
+          </IonButtons>
+          <IonTitle>Page four</IonTitle>
+        </IonToolbar>
+      </IonHeader>
+      <IonContent>
+        <IonButton id="replace-to-page3" onClick={() => ionRouter.push('/replace-action/page3', 'forward', 'replace')}>
+          Replace to Page3
+        </IonButton>
       </IonContent>
     </IonPage>
   );
@@ -81,4 +104,4 @@ const Page3: React.FC = () => {
 };
 
 export default ReplaceAction;
-export { Page1, Page2, Page3 };
+export { Page1, Page2, Page3, Page4 };

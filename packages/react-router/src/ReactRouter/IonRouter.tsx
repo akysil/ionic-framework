@@ -690,6 +690,19 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
     findViewItemByPathname: viewStack.current.findViewItemByPathname,
     getChildrenToRender: viewStack.current.getChildrenToRender,
     getViewItemsForOutlet: viewStack.current.getViewItemsForOutlet.bind(viewStack.current),
+    getBackHistoryPathnames: () => {
+      // Follows the same pushedByRoute chain that handleNavigateBack walks.
+      const pathnames: string[] = [];
+      const visited = new Set<string>();
+      let walker: RouteInfo | undefined = locationHistory.current.current();
+      while (walker?.pushedByRoute) {
+        if (visited.has(walker.id)) break; // cycle guard
+        visited.add(walker.id);
+        pathnames.push(walker.pushedByRoute);
+        walker = locationHistory.current.findLastLocation(walker);
+      }
+      return pathnames;
+    },
     goBack: () => handleNavigateBack(),
     createViewItem: viewStack.current.createViewItem,
     findViewItemByRouteInfo: viewStack.current.findViewItemByRouteInfo,

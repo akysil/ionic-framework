@@ -794,6 +794,19 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
     }
 
     const allViewsInOutlet = this.context.getViewItemsForOutlet(this.id);
+    // A replace only removes the current history entry, so views that back
+    // navigation can still return to must stay mounted.
+    const backHistoryViewItems = new Set<ViewItem | undefined>();
+    if (isReplaceAction) {
+      for (const pathname of this.context.getBackHistoryPathnames?.() ?? []) {
+        backHistoryViewItems.add(this.context.findViewItemByPathname(pathname, this.id));
+      }
+      // When the replaced entry is a <Navigate> redirect, the page that navigated
+      // to it is the one being replaced (as in findViewItems), so it is not kept.
+      if (routeInfo.prevRouteLastPathname && isNavigateElement(leavingViewItem?.reactElement?.props?.element)) {
+        backHistoryViewItems.delete(this.context.findViewItemByPathname(routeInfo.prevRouteLastPathname, this.id));
+      }
+    }
     const areSiblingRoutes = (path1: string, path2: string): boolean => {
       const path1IsRelative = !path1.startsWith('/');
       const path2IsRelative = !path2.startsWith('/');
@@ -834,6 +847,7 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
         viewItem.id === enteringViewItem.id ||
         (leavingViewItem && viewItem.id === leavingViewItem.id) ||
         !viewItem.mount ||
+        backHistoryViewItems.has(viewItem) ||
         !viewRoutePath ||
         // Don't clean up container routes when entering a container route
         // (e.g., /tabs/* and /settings/* coexist for tab switching)

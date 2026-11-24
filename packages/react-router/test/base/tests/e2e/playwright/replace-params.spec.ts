@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ionPageVisible, ionPageDoesNotExist, withTestingMode } from './utils/test-utils';
+import { ionPageVisible, ionPageHidden, ionPageDoesNotExist, withTestingMode } from './utils/test-utils';
 
 test.describe('Replace Params', () => {
   test('replaced views with params should be unmounted and fresh on revisit', async ({ page }, testInfo) => {
@@ -35,17 +35,18 @@ test.describe('Replace Params', () => {
     await ionPageVisible(page, 'replace-params-step2');
     await expect(page.locator('[data-testid="step2-param"]')).toHaveText('second');
 
-    // Wait for previously replaced views to be fully removed from the DOM
-    await ionPageDoesNotExist(page, 'replace-params-step4');
-    await ionPageDoesNotExist(page, 'replace-params-step3');
+    // step4/first and step3/first are still in the back history, so they stay mounted
+    await ionPageHidden(page, 'replace-params-step4');
+    await ionPageHidden(page, 'replace-params-step3');
 
     // Critical assertion: step3 should show 'second' params, not stale 'first'
     await page.locator('#go-step3').click();
-    await ionPageVisible(page, 'replace-params-step3');
-    await expect(page.locator('[data-testid="step3-param"]')).toHaveText('second');
+    const step3 = page.locator('div.ion-page[data-pageid="replace-params-step3"]:not(.ion-page-hidden)');
+    await expect(step3).toBeVisible();
+    await expect(step3.locator('[data-testid="step3-param"]')).toHaveText('second');
 
     // Verify it's a fresh component instance, not the cached one
-    const secondMountId = await page.locator('[data-testid="step3-mount-id"]').textContent();
+    const secondMountId = await step3.locator('[data-testid="step3-mount-id"]').textContent();
     expect(secondMountId).not.toBe(firstMountId);
   });
 
