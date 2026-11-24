@@ -177,6 +177,31 @@ export class LocationHistory {
     return undefined;
   }
 
+  /**
+   * Returns the pathnames that back navigation can still return to from the
+   * current route, nearest first. Follows each entry's `pushedByRoute` to the
+   * newest entry with that pathname that is older than the entry itself, so a
+   * pathname that appears more than once does not hide older entries.
+   */
+  getBackHistoryPathnames() {
+    const pathnames: string[] = [];
+    let index = this.locationHistory.length - 1;
+    let pushedByRoute = this.locationHistory[index]?.pushedByRoute;
+    while (pushedByRoute) {
+      let i = index - 1;
+      while (i >= 0 && this.locationHistory[i].pathname !== pushedByRoute) {
+        i--;
+      }
+      if (i < 0) {
+        break;
+      }
+      pathnames.push(pushedByRoute);
+      index = i;
+      pushedByRoute = this.locationHistory[i].pushedByRoute;
+    }
+    return pathnames;
+  }
+
   previous() {
     return (
       this.locationHistory[this.locationHistory.length - 2] || this.locationHistory[this.locationHistory.length - 1]

@@ -38,6 +38,14 @@ interface IonRouterProps {
   registerHistoryListener: (cb: (location: HistoryLocation, action: HistoryAction) => void) => void;
 }
 
+/**
+ * The RouteManagerContext value that IonRouter provides. The extra members
+ * are read by StackManager and stay internal to @ionic/react-router.
+ */
+export interface IonRouterContextState extends RouteManagerContextState {
+  getBackHistoryPathnames: () => string[];
+}
+
 type SafeRouteParams = Record<string, string | string[]>;
 
 const filterUndefinedParams = (params: RouteParams): SafeRouteParams => {
@@ -684,25 +692,13 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
     navigate(pathname, { replace: true });
   };
 
-  const routeMangerContextValue: RouteManagerContextState = {
+  const routeMangerContextValue: IonRouterContextState = {
     canGoBack: () => locationHistory.current.canGoBack(),
     clearOutlet: viewStack.current.clear,
     findViewItemByPathname: viewStack.current.findViewItemByPathname,
     getChildrenToRender: viewStack.current.getChildrenToRender,
     getViewItemsForOutlet: viewStack.current.getViewItemsForOutlet.bind(viewStack.current),
-    getBackHistoryPathnames: () => {
-      // Follows the same pushedByRoute chain that handleNavigateBack walks.
-      const pathnames: string[] = [];
-      const visited = new Set<string>();
-      let walker: RouteInfo | undefined = locationHistory.current.current();
-      while (walker?.pushedByRoute) {
-        if (visited.has(walker.id)) break; // cycle guard
-        visited.add(walker.id);
-        pathnames.push(walker.pushedByRoute);
-        walker = locationHistory.current.findLastLocation(walker);
-      }
-      return pathnames;
-    },
+    getBackHistoryPathnames: () => locationHistory.current.getBackHistoryPathnames(),
     goBack: () => handleNavigateBack(),
     createViewItem: viewStack.current.createViewItem,
     findViewItemByRouteInfo: viewStack.current.findViewItemByRouteInfo,

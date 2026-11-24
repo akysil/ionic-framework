@@ -72,6 +72,9 @@ const Page4: React.FC = () => {
         <IonButton id="replace-to-page3" onClick={() => ionRouter.push('/replace-action/page3', 'forward', 'replace')}>
           Replace to Page3
         </IonButton>
+        <IonButton id="go-to-page2-again" routerLink={'/replace-action/page2'}>
+          Goto Page2
+        </IonButton>
       </IonContent>
     </IonPage>
   );

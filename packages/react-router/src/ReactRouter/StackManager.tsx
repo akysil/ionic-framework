@@ -16,6 +16,7 @@ import React from 'react';
 import type { RouteObject } from 'react-router-dom';
 import { Route, UNSAFE_RouteContext as RouteContext, matchRoutes } from 'react-router-dom';
 
+import type { IonRouterContextState } from './IonRouter';
 import { clonePageElement } from './clonePageElement';
 import {
   analyzeRouteChildren,
@@ -798,7 +799,8 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
     // navigation can still return to must stay mounted.
     const backHistoryViewItems = new Set<ViewItem | undefined>();
     if (isReplaceAction) {
-      for (const pathname of this.context.getBackHistoryPathnames?.() ?? []) {
+      const context = this.context as Partial<IonRouterContextState>;
+      for (const pathname of context.getBackHistoryPathnames?.() ?? []) {
         backHistoryViewItems.add(this.context.findViewItemByPathname(pathname, this.id));
       }
       // When the replaced entry is a <Navigate> redirect, the page that navigated

@@ -148,6 +148,44 @@ test.describe('Replace History Entries', () => {
   });
 
   /**
+   * A pathname that appears twice in the back history does not hide the
+   * pages before it.
+   *
+   * Flow: home -> page1 -> push page2 -> push page4 -> push page2 -> push page4 -> replace page3 -> back x4 -> page1
+   */
+  test('replace should keep sibling pages mounted when a pathname repeats in back history', async ({ page }) => {
+    const visiblePage = (pageId: string) => page.locator(`div.ion-page[data-pageid="${pageId}"]:not(.ion-page-hidden)`);
+
+    await page.goto(withTestingMode('/'));
+    await ionPageVisible(page, 'home');
+
+    await ionNav(page, 'ion-item', 'Replace Action');
+    await ionPageVisible(page, 'page1');
+    await page.locator('div.ion-page[data-pageid="page1"]').evaluate((el) => el.setAttribute('data-marker', 'page1'));
+
+    await page.locator('#go-to-page2').click();
+    await expect(visiblePage('page2')).toBeVisible();
+    await visiblePage('page2').locator('#go-to-page4').click();
+    await expect(visiblePage('page4')).toBeVisible();
+    await visiblePage('page4').locator('#go-to-page2-again').click();
+    await expect(visiblePage('page2')).toBeVisible();
+    await visiblePage('page2').locator('#go-to-page4').click();
+    await expect(visiblePage('page4')).toBeVisible();
+
+    await visiblePage('page4').locator('#replace-to-page3').click();
+    await ionPageVisible(page, 'page3');
+    await page.waitForTimeout(500);
+    await ionPageHidden(page, 'page1');
+
+    for (const pageId of ['page3', 'page2', 'page4', 'page2']) {
+      await expect(visiblePage(pageId)).toBeVisible();
+      await visiblePage(pageId).locator('ion-back-button').click();
+    }
+    await ionPageVisible(page, 'page1');
+    await expect(page.locator('div.ion-page[data-pageid="page1"]')).toHaveAttribute('data-marker', 'page1');
+  });
+
+  /**
    * Tests browser forward still works after going back from a replaced page.
    * This verifies navigate(-1) is used (not replace) for the back navigation.
    */

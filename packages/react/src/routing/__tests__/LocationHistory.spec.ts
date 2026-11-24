@@ -177,6 +177,27 @@ describe('LocationHistory', () => {
         expect((locationHistory as any).locationHistory[2].pathname).toEqual('/tab1/details/3');
       });
     });
+
+    describe('page1 > page2 > page4 > page2 > page5, Replace to page3', () => {
+      beforeEach(() => {
+        const page1Route = createRoute('/page1');
+        const page2Route = createRoute('/page2', page1Route);
+        const page4Route = createRoute('/page4', page2Route);
+        const page2AgainRoute = createRoute('/page2', page4Route);
+        const page5Route = createRoute('/page5', page2AgainRoute);
+        const page3Route = createRoute('/page3', page2AgainRoute, undefined, 'replace');
+        locationHistory.add(page1Route);
+        locationHistory.add(page2Route);
+        locationHistory.add(page4Route);
+        locationHistory.add(page2AgainRoute);
+        locationHistory.add(page5Route);
+        locationHistory.add(page3Route);
+      });
+
+      it('back history should include the entries before the repeated pathname', () => {
+        expect(locationHistory.getBackHistoryPathnames()).toEqual(['/page2', '/page4', '/page2', '/page1']);
+      });
+    });
   });
 
   function currentRoute() {

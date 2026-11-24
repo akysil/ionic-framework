@@ -29,12 +29,6 @@ export interface RouteManagerContextState {
    * Used by StackManager for out-of-scope cleanup.
    */
   getViewItemsForOutlet: (outletId: string) => ViewItem[];
-  /**
-   * Returns the pathnames that back navigation can still return to from the
-   * current route, nearest first. Used by StackManager to keep those views
-   * mounted when cleaning up sibling views after a replace.
-   */
-  getBackHistoryPathnames?: () => string[];
   goBack: () => void;
   unMountViewItem: (viewItem: ViewItem) => void;
 }
