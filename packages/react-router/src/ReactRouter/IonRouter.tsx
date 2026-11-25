@@ -88,7 +88,7 @@ const checkIsMultiStepBack = (
  * the history, so tab history is searched first and a pathname that appears
  * more than once does not hide older entries.
  */
-const getBackHistoryPathnames = (history: LocationHistory): string[] => {
+const getBackHistoryPathnames = (history: LocationHistory, browserBackReplaceId?: string): string[] => {
   // The history arrays are private to LocationHistory; copy them so the walk
   // does not change the real history.
   const copy = new LocationHistory();
@@ -99,10 +99,16 @@ const getBackHistoryPathnames = (history: LocationHistory): string[] => {
   let routeInfo = copy.current();
   // Each step pops an entry, so this bounds the loop.
   let steps = copy['locationHistory'].length + Object.values(tabHistory).reduce((n, ris) => n + ris.length, 0);
-  // A replace to the previous pathname gets no pushedByRoute, but browser back
-  // still returns through the previous entry, so start the walk there.
+  // A replace to the previous pathname gets no pushedByRoute, and later replaces
+  // inherit that, but browser back still returns through the previous entry,
+  // so start the walk there.
   const previous = copy['locationHistory'][copy['locationHistory'].length - 2];
-  if (routeInfo?.routeAction === 'replace' && !routeInfo.pushedByRoute && previous?.pathname === routeInfo.pathname) {
+  if (
+    routeInfo?.routeAction === 'replace' &&
+    !routeInfo.pushedByRoute &&
+    previous &&
+    (previous.pathname === routeInfo.pathname || routeInfo.id === browserBackReplaceId)
+  ) {
     pathnames.push(previous.pathname);
     copy.add({ ...previous, routeAction: 'pop', routeDirection: 'back' });
     routeInfo = previous;
@@ -128,6 +134,10 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
   const currentTab = useRef<string | undefined>(undefined);
   const viewStack = useRef(new ReactRouterViewStack());
   const incomingRouteParams = useRef<Partial<RouteInfo> | null>(null);
+  // The latest replace entry that has no pushedByRoute only because it
+  // follows a replace to the previous pathname. Browser back still reaches
+  // the previous entry from it.
+  const browserBackReplaceId = useRef<string | undefined>(undefined);
   /**
    * Tracks location keys that the user navigated away from via browser back.
    * When a POP event's destination key matches the top of this stack, it's a
@@ -419,6 +429,13 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
           routeInfo.lastPathname = currentRouteInfo?.pathname || routeInfo.lastPathname;
           routeInfo.prevRouteLastPathname = currentRouteInfo?.lastPathname;
           routeInfo.pushedByRoute = pushedByRoute;
+          if (
+            !pushedByRoute &&
+            currentRouteInfo &&
+            (currentPushedBy === routeInfo.pathname || currentRouteInfo.id === browserBackReplaceId.current)
+          ) {
+            browserBackReplaceId.current = routeInfo.id;
+          }
 
           /**
            * When replacing routes we should still prefer
@@ -735,7 +752,7 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
     findViewItemByPathname: viewStack.current.findViewItemByPathname,
     getChildrenToRender: viewStack.current.getChildrenToRender,
     getViewItemsForOutlet: viewStack.current.getViewItemsForOutlet.bind(viewStack.current),
-    getBackHistoryPathnames: () => getBackHistoryPathnames(locationHistory.current),
+    getBackHistoryPathnames: () => getBackHistoryPathnames(locationHistory.current, browserBackReplaceId.current),
     goBack: () => handleNavigateBack(),
     createViewItem: viewStack.current.createViewItem,
     findViewItemByRouteInfo: viewStack.current.findViewItemByRouteInfo,

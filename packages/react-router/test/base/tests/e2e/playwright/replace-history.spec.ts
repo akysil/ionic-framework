@@ -232,6 +232,47 @@ test.describe('Replace History Entries', () => {
   });
 
   /**
+   * A second replace inherits the missing pushedByRoute of the first one, but
+   * browser back still returns through the earlier entries.
+   *
+   * Flow: page1 -> push page2 -> push page4 -> replace page2?from=replace -> replace page3 -> browser back x2 -> page1
+   */
+  test('consecutive replaces should keep the pages browser back returns to', async ({ page }) => {
+    const page1 = page.locator('div.ion-page[data-pageid="page1"]');
+    const page2 = page.locator('div.ion-page[data-pageid="page2"]');
+
+    await page.goto(withTestingMode('/'));
+    await ionPageVisible(page, 'home');
+
+    await ionNav(page, 'ion-item', 'Replace Action');
+    await ionPageVisible(page, 'page1');
+    await page1.evaluate((el) => el.setAttribute('data-marker', 'page1'));
+
+    await page.locator('#go-to-page2').click();
+    await ionPageVisible(page, 'page2');
+    await page2.evaluate((el) => el.setAttribute('data-marker', 'page2'));
+    await page.locator('#go-to-page4').click();
+    await ionPageVisible(page, 'page4');
+
+    await page.locator('#replace-to-page2-query').click();
+    await ionPageVisible(page, 'page2');
+    await expect(page).toHaveURL(/\/replace-action\/page2\?from=replace/);
+    await page.locator('#go-to-page3').click();
+    await ionPageVisible(page, 'page3');
+    // Let the deferred unmounts run before checking which pages are left.
+    await page.waitForTimeout(500);
+    await ionPageHidden(page, 'page1');
+    await ionPageHidden(page, 'page2');
+
+    await ionGoBack(page, '/replace-action/page2');
+    await ionPageVisible(page, 'page2');
+    await expect(page2).toHaveAttribute('data-marker', 'page2');
+    await ionGoBack(page, '/replace-action/page1');
+    await ionPageVisible(page, 'page1');
+    await expect(page1).toHaveAttribute('data-marker', 'page1');
+  });
+
+  /**
    * Back in another tab can drop a page from the global history while the
    * page's own tab history still holds it. Back uses the tab history first,
    * so the page stays mounted after a replace.
