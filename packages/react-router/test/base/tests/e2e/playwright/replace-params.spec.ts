@@ -35,7 +35,9 @@ test.describe('Replace Params', () => {
     await ionPageVisible(page, 'replace-params-step2');
     await expect(page.locator('[data-testid="step2-param"]')).toHaveText('second');
 
-    // step4/first and step3/first are still in the back history, so they stay mounted
+    // step4/first and step3/first are still in the back history, so they stay mounted.
+    // Let the deferred unmounts run before checking.
+    await page.waitForTimeout(500);
     await ionPageHidden(page, 'replace-params-step4');
     await ionPageHidden(page, 'replace-params-step3');
 

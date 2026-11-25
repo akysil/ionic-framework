@@ -88,7 +88,7 @@ const checkIsMultiStepBack = (
  * the history, so tab history is searched first and a pathname that appears
  * more than once does not hide older entries.
  */
-const getBackHistoryPathnames = (history: LocationHistory, browserBackReplaceId?: string): string[] => {
+const getBackHistoryPathnames = (history: LocationHistory, browserBackReplaceIds: Set<string>): string[] => {
   // The history arrays are private to LocationHistory; copy them so the walk
   // does not change the real history.
   const copy = new LocationHistory();
@@ -99,22 +99,15 @@ const getBackHistoryPathnames = (history: LocationHistory, browserBackReplaceId?
   let routeInfo = copy.current();
   // Each step pops an entry, so this bounds the loop.
   let steps = copy['locationHistory'].length + Object.values(tabHistory).reduce((n, ris) => n + ris.length, 0);
-  // A replace to the previous pathname gets no pushedByRoute, and later replaces
-  // inherit that, but browser back still returns through the previous entry,
-  // so start the walk there.
-  const previous = copy['locationHistory'][copy['locationHistory'].length - 2];
-  if (
-    routeInfo?.routeAction === 'replace' &&
-    !routeInfo.pushedByRoute &&
-    previous &&
-    (previous.pathname === routeInfo.pathname || routeInfo.id === browserBackReplaceId)
-  ) {
-    pathnames.push(previous.pathname);
-    copy.add({ ...previous, routeAction: 'pop', routeDirection: 'back' });
-    routeInfo = previous;
-  }
-  while (routeInfo?.pushedByRoute && steps-- > 0) {
-    const prevInfo = copy.findLastLocation(routeInfo);
+  while (routeInfo && steps-- > 0) {
+    // A replace to the previous pathname gets no pushedByRoute, and later
+    // replaces inherit that, but browser back still returns through the
+    // previous entry.
+    const prevInfo = routeInfo.pushedByRoute
+      ? copy.findLastLocation(routeInfo)
+      : browserBackReplaceIds.has(routeInfo.id)
+      ? copy['locationHistory'][copy['locationHistory'].length - 2]
+      : undefined;
     if (!prevInfo) {
       break;
     }
@@ -134,10 +127,10 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
   const currentTab = useRef<string | undefined>(undefined);
   const viewStack = useRef(new ReactRouterViewStack());
   const incomingRouteParams = useRef<Partial<RouteInfo> | null>(null);
-  // The latest replace entry that has no pushedByRoute only because it
-  // follows a replace to the previous pathname. Browser back still reaches
-  // the previous entry from it.
-  const browserBackReplaceId = useRef<string | undefined>(undefined);
+  // The replace entries that have no pushedByRoute only because they follow
+  // a replace to the previous pathname. Browser back still reaches the
+  // previous entry from them.
+  const browserBackReplaceIds = useRef(new Set<string>());
   /**
    * Tracks location keys that the user navigated away from via browser back.
    * When a POP event's destination key matches the top of this stack, it's a
@@ -432,9 +425,9 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
           if (
             !pushedByRoute &&
             currentRouteInfo &&
-            (currentPushedBy === routeInfo.pathname || currentRouteInfo.id === browserBackReplaceId.current)
+            (currentPushedBy === routeInfo.pathname || browserBackReplaceIds.current.has(currentRouteInfo.id))
           ) {
-            browserBackReplaceId.current = routeInfo.id;
+            browserBackReplaceIds.current.add(routeInfo.id);
           }
 
           /**
@@ -752,7 +745,7 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
     findViewItemByPathname: viewStack.current.findViewItemByPathname,
     getChildrenToRender: viewStack.current.getChildrenToRender,
     getViewItemsForOutlet: viewStack.current.getViewItemsForOutlet.bind(viewStack.current),
-    getBackHistoryPathnames: () => getBackHistoryPathnames(locationHistory.current, browserBackReplaceId.current),
+    getBackHistoryPathnames: () => getBackHistoryPathnames(locationHistory.current, browserBackReplaceIds.current),
     goBack: () => handleNavigateBack(),
     createViewItem: viewStack.current.createViewItem,
     findViewItemByRouteInfo: viewStack.current.findViewItemByRouteInfo,
