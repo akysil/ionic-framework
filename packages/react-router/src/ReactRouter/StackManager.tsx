@@ -745,12 +745,6 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
       return;
     }
 
-    // One view can serve several visits to a pathname. Keep it mounted when
-    // an older history entry still returns to it.
-    if (this.getBackHistoryViewItems(routeInfo, leavingViewItem).has(leavingViewItem)) {
-      return;
-    }
-
     leavingViewItem.mount = false;
 
     const viewToUnmount = leavingViewItem;
@@ -762,29 +756,6 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
       this.context.unMountViewItem(viewToUnmount);
       this.forceUpdate();
     }, VIEW_UNMOUNT_DELAY_MS);
-  }
-
-  /**
-   * Returns the views that back navigation can still return to after a replace.
-   * A replace only removes the current history entry, so these must stay mounted.
-   */
-  private getBackHistoryViewItems(routeInfo: RouteInfo, leavingViewItem: ViewItem | undefined) {
-    const backHistoryViewItems = new Set<ViewItem | undefined>();
-    const context = this.context as Partial<IonRouterContextState>;
-    for (const pathname of context.getBackHistoryPathnames?.() ?? []) {
-      backHistoryViewItems.add(this.context.findViewItemByPathname(pathname, this.id));
-    }
-    // When the replaced entry is a <Navigate> redirect reached without a forward
-    // push, the page that navigated to it is the one being replaced (as in
-    // findViewItems), so it is not kept.
-    if (
-      routeInfo.prevRouteLastPathname &&
-      isNavigateElement(leavingViewItem?.reactElement?.props?.element) &&
-      this.prevProps?.routeInfo.routeDirection !== 'forward'
-    ) {
-      backHistoryViewItems.delete(this.context.findViewItemByPathname(routeInfo.prevRouteLastPathname, this.id));
-    }
-    return backHistoryViewItems;
   }
 
   /**
@@ -824,9 +795,7 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
     }
 
     const allViewsInOutlet = this.context.getViewItemsForOutlet(this.id);
-    const backHistoryViewItems = isReplaceAction
-      ? this.getBackHistoryViewItems(routeInfo, leavingViewItem)
-      : new Set<ViewItem | undefined>();
+    const context = this.context as Partial<IonRouterContextState>;
     const areSiblingRoutes = (path1: string, path2: string): boolean => {
       const path1IsRelative = !path1.startsWith('/');
       const path2IsRelative = !path2.startsWith('/');
@@ -867,7 +836,9 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
         viewItem.id === enteringViewItem.id ||
         (leavingViewItem && viewItem.id === leavingViewItem.id) ||
         !viewItem.mount ||
-        backHistoryViewItems.has(viewItem) ||
+        // A replace removes only the current history entry. Back can still
+        // return to the pages that the location history holds.
+        (isReplaceAction && !!context.isInLocationHistory?.(viewItem.routeData?.match?.pathname)) ||
         !viewRoutePath ||
         // Don't clean up container routes when entering a container route
         // (e.g., /tabs/* and /settings/* coexist for tab switching)

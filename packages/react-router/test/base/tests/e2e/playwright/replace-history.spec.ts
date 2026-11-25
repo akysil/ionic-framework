@@ -150,8 +150,8 @@ test.describe('Replace History Entries', () => {
 
   /**
    * A pathname that appears twice in the back history does not hide the
-   * pages before it. The replaced page4 view also serves the older page4
-   * entry, so it stays mounted too.
+   * pages before it. The replaced page4 view unmounts, as the replaced page
+   * does in Ionic 8, and back to the older page4 entry mounts it again.
    *
    * Flow: home -> page1 -> push page2 -> push page4 -> push page2 -> push page4 -> replace page3 -> back x4 -> page1
    */
@@ -170,7 +170,6 @@ test.describe('Replace History Entries', () => {
     await expect(visiblePage('page2')).toBeVisible();
     await visiblePage('page2').locator('#go-to-page4').click();
     await expect(visiblePage('page4')).toBeVisible();
-    await pageLocator('page4').evaluate((el) => el.setAttribute('data-marker', 'page4'));
     await visiblePage('page4').locator('#go-to-page2-again').click();
     await expect(visiblePage('page2')).toBeVisible();
     await visiblePage('page2').locator('#go-to-page4').click();
@@ -181,13 +180,10 @@ test.describe('Replace History Entries', () => {
     // Let the deferred unmounts run before checking which pages are left.
     await page.waitForTimeout(500);
     await ionPageHidden(page, 'page1');
-    await ionPageHidden(page, 'page4');
+    await ionPageDoesNotExist(page, 'page4');
 
     for (const pageId of ['page3', 'page2', 'page4', 'page2']) {
       await expect(visiblePage(pageId)).toBeVisible();
-      if (pageId === 'page4') {
-        await expect(pageLocator('page4')).toHaveAttribute('data-marker', 'page4');
-      }
       await visiblePage(pageId).locator('ion-back-button').click();
     }
     await ionPageVisible(page, 'page1');
@@ -233,13 +229,13 @@ test.describe('Replace History Entries', () => {
 
   /**
    * A second replace inherits the missing pushedByRoute of the first one, but
-   * browser back still returns through the earlier entries.
+   * browser back still returns through the earlier entries. The replaced
+   * page2 view unmounts, as the replaced page does in Ionic 8.
    *
    * Flow: page1 -> push page2 -> push page4 -> replace page2?from=replace -> replace page3 -> browser back x2 -> page1
    */
   test('consecutive replaces should keep the pages browser back returns to', async ({ page }) => {
     const page1 = page.locator('div.ion-page[data-pageid="page1"]');
-    const page2 = page.locator('div.ion-page[data-pageid="page2"]');
 
     await page.goto(withTestingMode('/'));
     await ionPageVisible(page, 'home');
@@ -250,7 +246,6 @@ test.describe('Replace History Entries', () => {
 
     await page.locator('#go-to-page2').click();
     await ionPageVisible(page, 'page2');
-    await page2.evaluate((el) => el.setAttribute('data-marker', 'page2'));
     await page.locator('#go-to-page4').click();
     await ionPageVisible(page, 'page4');
 
@@ -262,11 +257,10 @@ test.describe('Replace History Entries', () => {
     // Let the deferred unmounts run before checking which pages are left.
     await page.waitForTimeout(500);
     await ionPageHidden(page, 'page1');
-    await ionPageHidden(page, 'page2');
+    await ionPageDoesNotExist(page, 'page2');
 
     await ionGoBack(page, '/replace-action/page2');
     await ionPageVisible(page, 'page2');
-    await expect(page2).toHaveAttribute('data-marker', 'page2');
     await ionGoBack(page, '/replace-action/page1');
     await ionPageVisible(page, 'page1');
     await expect(page1).toHaveAttribute('data-marker', 'page1');

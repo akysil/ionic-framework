@@ -43,7 +43,7 @@ interface IonRouterProps {
  * are read by StackManager and stay internal to @ionic/react-router.
  */
 export interface IonRouterContextState extends RouteManagerContextState {
-  getBackHistoryPathnames: () => string[];
+  isInLocationHistory: (pathname: string) => boolean;
 }
 
 type SafeRouteParams = Record<string, string | string[]>;
@@ -82,36 +82,6 @@ const checkIsMultiStepBack = (
   return false;
 };
 
-/**
- * Returns the pathnames that back navigation can still return to: the
- * browser entries before the current one, and the entries that successive
- * Ionic backs reach. Ionic back is replayed (findLastLocation, then a pop) on
- * a copy of the history, so tab history is searched first and a pathname that
- * appears more than once does not hide older entries.
- */
-const getBackHistoryPathnames = (history: LocationHistory, browserBackPathnames: string[]): string[] => {
-  // The history arrays are private to LocationHistory; copy them so the walk
-  // does not change the real history.
-  const copy = new LocationHistory();
-  const tabHistory: Record<string, RouteInfo[]> = history['tabHistory'];
-  copy['locationHistory'] = [...history['locationHistory']];
-  Object.keys(tabHistory).forEach((tab) => (copy['tabHistory'][tab] = [...tabHistory[tab]]));
-  const pathnames = [...browserBackPathnames];
-  let routeInfo = copy.current();
-  // Each step pops an entry, so this bounds the loop.
-  let steps = copy['locationHistory'].length + Object.values(tabHistory).reduce((n, ris) => n + ris.length, 0);
-  while (routeInfo?.pushedByRoute && steps-- > 0) {
-    const prevInfo = copy.findLastLocation(routeInfo);
-    if (!prevInfo) {
-      break;
-    }
-    pathnames.push(prevInfo.pathname);
-    copy.add({ ...prevInfo, routeAction: 'pop', routeDirection: 'back' });
-    routeInfo = prevInfo;
-  }
-  return pathnames;
-};
-
 export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildren<IonRouterProps>) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -121,12 +91,6 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
   const currentTab = useRef<string | undefined>(undefined);
   const viewStack = useRef(new ReactRouterViewStack());
   const incomingRouteParams = useRef<Partial<RouteInfo> | null>(null);
-  /**
-   * The history entries this router has seen (by location key) and the
-   * current position. A replace keeps the pages of the entries before the
-   * current one mounted, because back can still return to them.
-   */
-  const browserHistory = useRef({ entries: [{ key: location.key, pathname: location.pathname }], index: 0 });
   /**
    * Tracks location keys that the user navigated away from via browser back.
    * When a POP event's destination key matches the top of this stack, it's a
@@ -207,22 +171,6 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
    * @param action The action that triggered the history change.
    */
   const handleHistoryChange = (location: HistoryLocation, action: HistoryAction) => {
-    const browser = browserHistory.current;
-    const entry = { key: location.key, pathname: location.pathname };
-    if (action === 'PUSH' && browser.entries[browser.index].key !== location.key) {
-      browser.entries = [...browser.entries.slice(0, browser.index + 1), entry];
-      browser.index++;
-    } else if (action === 'REPLACE') {
-      browser.entries[browser.index] = entry;
-    } else if (action === 'POP') {
-      browser.index = browser.entries.findIndex((e) => e.key === location.key);
-      if (browser.index < 0) {
-        // An entry this router has not seen (e.g. from before a reload).
-        browser.entries = [entry];
-        browser.index = 0;
-      }
-    }
-
     /**
      * The leaving location is always the current route, for both programmatic
      * and external navigations. Using `previous()` for replace actions was
@@ -750,10 +698,10 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
     findViewItemByPathname: viewStack.current.findViewItemByPathname,
     getChildrenToRender: viewStack.current.getChildrenToRender,
     getViewItemsForOutlet: viewStack.current.getViewItemsForOutlet.bind(viewStack.current),
-    getBackHistoryPathnames: () =>
-      getBackHistoryPathnames(
-        locationHistory.current,
-        browserHistory.current.entries.slice(0, browserHistory.current.index).map((e) => e.pathname)
+    isInLocationHistory: (pathname: string) =>
+      !!(
+        locationHistory.current.findLastLocationByPathname(pathname) ||
+        locationHistory.current.findTabForPathname(pathname)
       ),
     goBack: () => handleNavigateBack(),
     createViewItem: viewStack.current.createViewItem,
