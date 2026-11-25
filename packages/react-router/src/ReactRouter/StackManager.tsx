@@ -798,8 +798,9 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
     const context = this.context as Partial<IonRouterContextState>;
     // A relative route matches the pathname below the outlet's parent path
     // (see matchComponent), so the parent path is added back before the
-    // pathname is compared with the location history.
-    const parentPath = isReplaceAction ? this.getParentPath() : undefined;
+    // pathname is compared with the location history. Relative routes in the
+    // root outlet are relative to "/".
+    const parentPath = isReplaceAction ? (this.isRootOutlet ? '' : this.getParentPath()) : undefined;
     const isInLocationHistory = (viewItem: ViewItem, routePath: string) => {
       let pathname: string | undefined = viewItem.routeData?.match?.pathname;
       if (pathname !== undefined && parentPath !== undefined && !routePath.startsWith('/')) {

@@ -13,12 +13,16 @@ import {
 import React from 'react';
 import { Route } from 'react-router-dom';
 
-const Page: React.FC<{ step: number }> = ({ step }) => {
+/**
+ * `base` is the URL of the page without its step number, e.g.
+ * `/replace-relative/page` for `/replace-relative/page1`.
+ */
+export const Page: React.FC<{ base: string; step: number }> = ({ base, step }) => {
   const ionRouter = useIonRouter();
-  const next = `/replace-relative/page${step + 1}`;
+  const next = `${base}${step + 1}`;
 
   return (
-    <IonPage data-pageid={`replace-relative-page${step}`}>
+    <IonPage data-pageid={`${base.slice(1).replace('/', '-')}${step}`}>
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
@@ -44,10 +48,10 @@ const Page: React.FC<{ step: number }> = ({ step }) => {
  */
 const ReplaceRelative: React.FC = () => (
   <IonRouterOutlet>
-    <Route path="page1" element={<Page step={1} />} />
-    <Route path="page2" element={<Page step={2} />} />
-    <Route path="page3" element={<Page step={3} />} />
-    <Route path="page4" element={<Page step={4} />} />
+    <Route path="page1" element={<Page base="/replace-relative/page" step={1} />} />
+    <Route path="page2" element={<Page base="/replace-relative/page" step={2} />} />
+    <Route path="page3" element={<Page base="/replace-relative/page" step={3} />} />
+    <Route path="page4" element={<Page base="/replace-relative/page" step={4} />} />
   </IonRouterOutlet>
 );
 

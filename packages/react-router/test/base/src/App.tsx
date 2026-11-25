@@ -22,7 +22,7 @@ import { OutletRef } from './pages/outlet-ref/OutletRef';
 import Params from './pages/params/Params';
 import Refs from './pages/refs/Refs';
 import { Page1, Page2, Page3, Page4 } from './pages/replace-action/Replace';
-import ReplaceRelative from './pages/replace-action/ReplaceRelative';
+import ReplaceRelative, { Page as ReplaceRelativePage } from './pages/replace-action/ReplaceRelative';
 import ReplaceTabs from './pages/replace-action/ReplaceTabs';
 import Routing from './pages/routing/Routing';
 import { SwipeToGoBack, SwipeToGoBackDisabled } from './pages/swipe-to-go-back/SwipeToGoBack';
@@ -88,6 +88,11 @@ const App: React.FC = () => {
           <Route path="/replace-action/alias" element={<Navigate to="/replace-action/page3" replace />} />
           <Route path="/replace-action" element={<Navigate to="/replace-action/page1" replace />} />
           <Route path="/replace-relative/*" element={<ReplaceRelative />} />
+          {/* Relative sibling routes declared directly in the root outlet */}
+          <Route path="replace-root-page1" element={<ReplaceRelativePage base="/replace-root-page" step={1} />} />
+          <Route path="replace-root-page2" element={<ReplaceRelativePage base="/replace-root-page" step={2} />} />
+          <Route path="replace-root-page3" element={<ReplaceRelativePage base="/replace-root-page" step={3} />} />
+          <Route path="replace-root-page4" element={<ReplaceRelativePage base="/replace-root-page" step={4} />} />
           <Route path="/replace-tabs/*" element={<ReplaceTabs />} />
           <Route path="/tab-context/*" element={<TabsContext />} />
           <Route path="/outlet-ref" element={<OutletRef />} />
