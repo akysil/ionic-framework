@@ -22,6 +22,7 @@ import { OutletRef } from './pages/outlet-ref/OutletRef';
 import Params from './pages/params/Params';
 import Refs from './pages/refs/Refs';
 import { Page1, Page2, Page3, Page4 } from './pages/replace-action/Replace';
+import ReplaceRelative from './pages/replace-action/ReplaceRelative';
 import ReplaceTabs from './pages/replace-action/ReplaceTabs';
 import Routing from './pages/routing/Routing';
 import { SwipeToGoBack, SwipeToGoBackDisabled } from './pages/swipe-to-go-back/SwipeToGoBack';
@@ -86,6 +87,7 @@ const App: React.FC = () => {
           <Route path="/replace-action/page4" element={<Page4 />} />
           <Route path="/replace-action/alias" element={<Navigate to="/replace-action/page3" replace />} />
           <Route path="/replace-action" element={<Navigate to="/replace-action/page1" replace />} />
+          <Route path="/replace-relative/*" element={<ReplaceRelative />} />
           <Route path="/replace-tabs/*" element={<ReplaceTabs />} />
           <Route path="/tab-context/*" element={<TabsContext />} />
           <Route path="/outlet-ref" element={<OutletRef />} />

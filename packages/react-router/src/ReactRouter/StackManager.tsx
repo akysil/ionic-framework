@@ -796,6 +796,17 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
 
     const allViewsInOutlet = this.context.getViewItemsForOutlet(this.id);
     const context = this.context as Partial<IonRouterContextState>;
+    // A relative route matches the pathname below the outlet's parent path
+    // (see matchComponent), so the parent path is added back before the
+    // pathname is compared with the location history.
+    const parentPath = isReplaceAction ? this.getParentPath() : undefined;
+    const isInLocationHistory = (viewItem: ViewItem, routePath: string) => {
+      let pathname: string | undefined = viewItem.routeData?.match?.pathname;
+      if (pathname !== undefined && parentPath !== undefined && !routePath.startsWith('/')) {
+        pathname = `${parentPath.replace(/\/$/, '')}/${pathname.replace(/^\//, '')}`;
+      }
+      return pathname !== undefined && !!context.isInLocationHistory?.(pathname);
+    };
     const areSiblingRoutes = (path1: string, path2: string): boolean => {
       const path1IsRelative = !path1.startsWith('/');
       const path2IsRelative = !path2.startsWith('/');
@@ -836,13 +847,13 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
         viewItem.id === enteringViewItem.id ||
         (leavingViewItem && viewItem.id === leavingViewItem.id) ||
         !viewItem.mount ||
-        // A replace removes only the current history entry. Back can still
-        // return to the pages that the location history holds.
-        (isReplaceAction && !!context.isInLocationHistory?.(viewItem.routeData?.match?.pathname)) ||
         !viewRoutePath ||
         // Don't clean up container routes when entering a container route
         // (e.g., /tabs/* and /settings/* coexist for tab switching)
-        (viewRoutePath.endsWith('/*') && enteringRoutePath.endsWith('/*'));
+        (viewRoutePath.endsWith('/*') && enteringRoutePath.endsWith('/*')) ||
+        // A replace removes only the current history entry. Keep the pages
+        // whose pathname the location history still holds.
+        (isReplaceAction && isInLocationHistory(viewItem, viewRoutePath));
 
       if (shouldSkip) {
         continue;

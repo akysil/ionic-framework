@@ -489,6 +489,40 @@ test.describe('Replace History Entries', () => {
   });
 
   /**
+   * Sibling routes declared with relative paths in a nested outlet also stay
+   * mounted while back can return to them.
+   *
+   * Flow: page1 -> push page2 -> push page3 -> replace page4 -> back -> page2 -> back -> page1
+   */
+  test('replace should keep relative sibling pages in back history mounted', async ({ page }) => {
+    const pageLocator = (step: number) => page.locator(`div.ion-page[data-pageid="replace-relative-page${step}"]`);
+
+    await page.goto(withTestingMode('/replace-relative/page1'));
+    await ionPageVisible(page, 'replace-relative-page1');
+    await pageLocator(1).evaluate((el) => el.setAttribute('data-marker', 'page1'));
+    await page.locator('#relative-go-to-page2').click();
+    await ionPageVisible(page, 'replace-relative-page2');
+    await pageLocator(2).evaluate((el) => el.setAttribute('data-marker', 'page2'));
+    await page.locator('#relative-go-to-page3').click();
+    await ionPageVisible(page, 'replace-relative-page3');
+
+    await page.locator('#relative-replace-to-page4').click();
+    await ionPageVisible(page, 'replace-relative-page4');
+    // Let the deferred unmounts run before checking which pages are left.
+    await page.waitForTimeout(500);
+    await ionPageDoesNotExist(page, 'replace-relative-page3');
+    await ionPageHidden(page, 'replace-relative-page1');
+    await ionPageHidden(page, 'replace-relative-page2');
+
+    await ionBackClick(page, 'replace-relative-page4');
+    await ionPageVisible(page, 'replace-relative-page2');
+    await expect(pageLocator(2)).toHaveAttribute('data-marker', 'page2');
+    await ionBackClick(page, 'replace-relative-page2');
+    await ionPageVisible(page, 'replace-relative-page1');
+    await expect(pageLocator(1)).toHaveAttribute('data-marker', 'page1');
+  });
+
+  /**
    * A forward push to a <Navigate replace> route replaces only the redirect
    * entry, so the page that pushed it stays mounted.
    *
