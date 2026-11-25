@@ -47,7 +47,7 @@ const Step1: React.FC = () => {
         >
           Replace to Step 2 (second)
         </IonButton>
-        <TestDescription>Tap "Replace to Step 2 (first)" -&gt; "Replace to Step 3" -&gt; "Push to Step 4" -&gt; go back to Step 1. Then repeat with "second". On the second visit to Step 3, it should show the "second" param and a different mount ID, confirming the old view was cleaned up from the DOM (issue #25640).</TestDescription>
+        <TestDescription>Tap "Replace to Step 2 (first)" -&gt; "Replace to Step 3" -&gt; "Push to Step 4" -&gt; go back to Step 1. Then repeat with "second". On the second visit to Step 3, it should show the "second" param and a different mount ID, confirming that a fresh view was created for the new param while the old one stays hidden for back navigation (issues #25640, #31815).</TestDescription>
       </IonContent>
     </IonPage>
   );
