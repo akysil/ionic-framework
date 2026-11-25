@@ -807,6 +807,16 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
       }
       return pathname !== undefined && !!context.isInLocationHistory?.(pathname);
     };
+    // When the replaced entry is a <Navigate> redirect reached without a forward
+    // push, the page that navigated to it is the one being replaced (as in
+    // findViewItems), so it is not kept.
+    const redirectSourceViewItem =
+      isReplaceAction &&
+      routeInfo.prevRouteLastPathname &&
+      isNavigateElement(leavingViewItem?.reactElement?.props?.element) &&
+      this.prevProps?.routeInfo.routeDirection !== 'forward'
+        ? this.context.findViewItemByPathname(routeInfo.prevRouteLastPathname, this.id)
+        : undefined;
     const areSiblingRoutes = (path1: string, path2: string): boolean => {
       const path1IsRelative = !path1.startsWith('/');
       const path2IsRelative = !path2.startsWith('/');
@@ -853,7 +863,7 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
         (viewRoutePath.endsWith('/*') && enteringRoutePath.endsWith('/*')) ||
         // A replace removes only the current history entry. Keep the pages
         // whose pathname the location history still holds.
-        (isReplaceAction && isInLocationHistory(viewItem, viewRoutePath));
+        (isReplaceAction && viewItem !== redirectSourceViewItem && isInLocationHistory(viewItem, viewRoutePath));
 
       if (shouldSkip) {
         continue;
