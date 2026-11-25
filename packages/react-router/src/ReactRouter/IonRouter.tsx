@@ -720,8 +720,15 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
     findViewItemByPathname: viewStack.current.findViewItemByPathname,
     getChildrenToRender: viewStack.current.getChildrenToRender,
     getViewItemsForOutlet: viewStack.current.getViewItemsForOutlet.bind(viewStack.current),
-    getBackHistoryPathnames: () =>
-      browserHistory.current.entries.slice(0, browserHistory.current.index).map((e) => e.pathname),
+    getBackHistoryPathnames: () => {
+      const { entries, index } = browserHistory.current;
+      const pathnames = entries.slice(0, index).map((e) => e.pathname);
+      // After browser back and forward, the Ionic back target can be ahead
+      // of the current browser entry, so keep it as well.
+      const routeInfo = locationHistory.current.current();
+      const prevInfo = routeInfo?.pushedByRoute ? locationHistory.current.findLastLocation(routeInfo) : undefined;
+      return prevInfo ? [...pathnames, prevInfo.pathname] : pathnames;
+    },
     goBack: () => handleNavigateBack(),
     createViewItem: viewStack.current.createViewItem,
     findViewItemByRouteInfo: viewStack.current.findViewItemByRouteInfo,

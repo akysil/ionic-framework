@@ -412,6 +412,51 @@ test.describe('Replace History Entries', () => {
   });
 
   /**
+   * After browser back and forward, Ionic back can return to a page that is
+   * ahead of the current browser entry. A replace keeps that page mounted.
+   *
+   * Flow: a1 -> a2 -> a3 -> back x2 -> browser forward x2 -> browser back x2 -> replace a2 -> back -> a3
+   */
+  test('replace should keep the page that ionic back returns to mounted', async ({ page }) => {
+    const a3 = page.locator('div.ion-page[data-pageid="replace-tabs-a3"]');
+
+    await page.goto(withTestingMode('/replace-tabs/a'));
+    await ionPageVisible(page, 'replace-tabs-a1');
+    await page.locator('#go-to-a2').click();
+    await ionPageVisible(page, 'replace-tabs-a2');
+    await page.locator('#go-to-a3').click();
+    await ionPageVisible(page, 'replace-tabs-a3');
+    await ionBackClick(page, 'replace-tabs-a3');
+    await ionPageVisible(page, 'replace-tabs-a2');
+    await ionBackClick(page, 'replace-tabs-a2');
+    await ionPageVisible(page, 'replace-tabs-a1');
+
+    await page.goForward();
+    await page.waitForTimeout(500);
+    await ionPageVisible(page, 'replace-tabs-a2');
+    await page.goForward();
+    await page.waitForTimeout(500);
+    await ionPageVisible(page, 'replace-tabs-a3');
+    await a3.evaluate((el) => el.setAttribute('data-marker', 'a3'));
+    await page.goBack();
+    await page.waitForTimeout(500);
+    await ionPageVisible(page, 'replace-tabs-a2');
+    await page.goBack();
+    await page.waitForTimeout(500);
+    await ionPageVisible(page, 'replace-tabs-a1');
+
+    await page.locator('#replace-to-a2').click();
+    await ionPageVisible(page, 'replace-tabs-a2');
+    // Let the deferred cleanup run before checking that a3 is still there.
+    await page.waitForTimeout(500);
+    await ionPageHidden(page, 'replace-tabs-a3');
+
+    await ionBackClick(page, 'replace-tabs-a2');
+    await ionPageVisible(page, 'replace-tabs-a3');
+    await expect(a3).toHaveAttribute('data-marker', 'a3');
+  });
+
+  /**
    * A forward push to a <Navigate replace> route replaces only the redirect
    * entry, so the page that pushed it stays mounted.
    *
