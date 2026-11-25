@@ -82,36 +82,6 @@ const checkIsMultiStepBack = (
   return false;
 };
 
-/**
- * Returns the pathnames that back navigation can still return to: the
- * browser entries before the current one, and the entries that Ionic back
- * reaches. Ionic back is replayed (findLastLocation, then a pop) on a copy of
- * the history, so tab history is searched first and a pathname that appears
- * more than once does not hide older entries.
- */
-const getBackHistoryPathnames = (history: LocationHistory, browserBackPathnames: string[]): string[] => {
-  // The history arrays are private to LocationHistory; copy them so the walk
-  // does not change the real history.
-  const copy = new LocationHistory();
-  const tabHistory: Record<string, RouteInfo[]> = history['tabHistory'];
-  copy['locationHistory'] = [...history['locationHistory']];
-  Object.keys(tabHistory).forEach((tab) => (copy['tabHistory'][tab] = [...tabHistory[tab]]));
-  const pathnames = [...browserBackPathnames];
-  let routeInfo = copy.current();
-  // Each step pops an entry, so this bounds the loop.
-  let steps = copy['locationHistory'].length + Object.values(tabHistory).reduce((n, ris) => n + ris.length, 0);
-  while (routeInfo?.pushedByRoute && steps-- > 0) {
-    const prevInfo = copy.findLastLocation(routeInfo);
-    if (!prevInfo) {
-      break;
-    }
-    pathnames.push(prevInfo.pathname);
-    copy.add({ ...prevInfo, routeAction: 'pop', routeDirection: 'back' });
-    routeInfo = prevInfo;
-  }
-  return pathnames;
-};
-
 export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildren<IonRouterProps>) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -122,9 +92,9 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
   const viewStack = useRef(new ReactRouterViewStack());
   const incomingRouteParams = useRef<Partial<RouteInfo> | null>(null);
   /**
-   * Mirrors the browser history entries (by location key) and the current
-   * position, so a replace can keep the pages that browser back still reaches
-   * even when locationHistory has no pushedByRoute for them.
+   * The history entries this router has seen (by location key) and the
+   * current position. A replace keeps the pages of the entries before the
+   * current one mounted, because back can still return to them.
    */
   const browserHistory = useRef({ entries: [{ key: location.key, pathname: location.pathname }], index: 0 });
   /**
@@ -751,10 +721,7 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
     getChildrenToRender: viewStack.current.getChildrenToRender,
     getViewItemsForOutlet: viewStack.current.getViewItemsForOutlet.bind(viewStack.current),
     getBackHistoryPathnames: () =>
-      getBackHistoryPathnames(
-        locationHistory.current,
-        browserHistory.current.entries.slice(0, browserHistory.current.index).map((e) => e.pathname)
-      ),
+      browserHistory.current.entries.slice(0, browserHistory.current.index).map((e) => e.pathname),
     goBack: () => handleNavigateBack(),
     createViewItem: viewStack.current.createViewItem,
     findViewItemByRouteInfo: viewStack.current.findViewItemByRouteInfo,
