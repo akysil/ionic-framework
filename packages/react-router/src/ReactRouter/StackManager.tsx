@@ -802,11 +802,16 @@ export class StackManager extends React.PureComponent<StackManagerProps> {
     // root outlet are relative to "/".
     const parentPath = isReplaceAction ? (this.isRootOutlet ? '' : this.getParentPath()) : undefined;
     const isInLocationHistory = (viewItem: ViewItem, routePath: string) => {
-      let pathname: string | undefined = viewItem.routeData?.match?.pathname;
-      if (pathname !== undefined && parentPath !== undefined && !routePath.startsWith('/')) {
-        pathname = `${parentPath.replace(/\/$/, '')}/${pathname.replace(/^\//, '')}`;
+      const pathname: string | undefined = viewItem.routeData?.match?.pathname;
+      if (pathname === undefined) {
+        return false;
       }
-      return pathname !== undefined && !!context.isInLocationHistory?.(pathname);
+      if (parentPath === undefined || routePath.startsWith('/')) {
+        return !!context.isInLocationHistory?.(pathname);
+      }
+      // The relative match can drop the trailing slash of the visited URL.
+      const fullPathname = `${parentPath.replace(/\/$/, '')}/${pathname.replace(/^\/|\/$/g, '')}`;
+      return !!(context.isInLocationHistory?.(fullPathname) || context.isInLocationHistory?.(`${fullPathname}/`));
     };
     // When the replaced entry is a <Navigate> redirect reached without a forward
     // push, the page that navigated to it is the one being replaced (as in

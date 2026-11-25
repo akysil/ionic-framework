@@ -494,16 +494,19 @@ test.describe('Replace History Entries', () => {
    *
    * Flow: page1 -> push page2 -> push page3 -> replace page4 -> back -> page2 -> back -> page1
    */
-  for (const { outlet, url, pageId } of [
-    { outlet: 'a nested', url: '/replace-relative/page', pageId: 'replace-relative-page' },
-    { outlet: 'the root', url: '/replace-root-page', pageId: 'replace-root-page' },
+  for (const { outlet, start, pageId } of [
+    { outlet: 'a nested outlet', start: '/replace-relative/page1', pageId: 'replace-relative-page' },
+    { outlet: 'the root outlet', start: '/replace-root-page1', pageId: 'replace-root-page' },
+    {
+      outlet: 'the root outlet from a url with a trailing slash',
+      start: '/replace-root-page1/',
+      pageId: 'replace-root-page',
+    },
   ]) {
-    test(`replace should keep relative sibling pages in back history mounted in ${outlet} outlet`, async ({
-      page,
-    }) => {
+    test(`replace should keep relative sibling pages in back history mounted in ${outlet}`, async ({ page }) => {
       const pageLocator = (step: number) => page.locator(`div.ion-page[data-pageid="${pageId}${step}"]`);
 
-      await page.goto(withTestingMode(`${url}1`));
+      await page.goto(withTestingMode(start));
       await ionPageVisible(page, `${pageId}1`);
       await pageLocator(1).evaluate((el) => el.setAttribute('data-marker', 'page1'));
       await page.locator('#relative-go-to-page2').click();
