@@ -415,7 +415,7 @@ test.describe('Replace History Entries', () => {
    * After browser back and forward, Ionic back can return to a page that is
    * ahead of the current browser entry. A replace keeps that page mounted.
    *
-   * Flow: a1 -> a2 -> a3 -> back x2 -> browser forward x2 -> browser back x2 -> replace a2 -> back -> a3
+   * Flow: a1 -> a2 -> a3 -> back x2 -> browser forward -> a3 -> browser back -> a1 -> replace a2 -> back -> a3
    */
   test('replace should keep the page that ionic back returns to mounted', async ({ page }) => {
     const a3 = page.locator('div.ion-page[data-pageid="replace-tabs-a3"]');
@@ -431,16 +431,11 @@ test.describe('Replace History Entries', () => {
     await ionBackClick(page, 'replace-tabs-a2');
     await ionPageVisible(page, 'replace-tabs-a1');
 
-    await page.goForward();
-    await page.waitForTimeout(500);
-    await ionPageVisible(page, 'replace-tabs-a2');
+    // The second back replaced the a2 entry with a1, so forward returns to a3.
     await page.goForward();
     await page.waitForTimeout(500);
     await ionPageVisible(page, 'replace-tabs-a3');
     await a3.evaluate((el) => el.setAttribute('data-marker', 'a3'));
-    await page.goBack();
-    await page.waitForTimeout(500);
-    await ionPageVisible(page, 'replace-tabs-a2');
     await page.goBack();
     await page.waitForTimeout(500);
     await ionPageVisible(page, 'replace-tabs-a1');
