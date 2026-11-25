@@ -82,6 +82,36 @@ const checkIsMultiStepBack = (
   return false;
 };
 
+/**
+ * Returns the pathnames that back navigation can still return to: the
+ * browser entries before the current one, and the entries that successive
+ * Ionic backs reach. Ionic back is replayed (findLastLocation, then a pop) on
+ * a copy of the history, so tab history is searched first and a pathname that
+ * appears more than once does not hide older entries.
+ */
+const getBackHistoryPathnames = (history: LocationHistory, browserBackPathnames: string[]): string[] => {
+  // The history arrays are private to LocationHistory; copy them so the walk
+  // does not change the real history.
+  const copy = new LocationHistory();
+  const tabHistory: Record<string, RouteInfo[]> = history['tabHistory'];
+  copy['locationHistory'] = [...history['locationHistory']];
+  Object.keys(tabHistory).forEach((tab) => (copy['tabHistory'][tab] = [...tabHistory[tab]]));
+  const pathnames = [...browserBackPathnames];
+  let routeInfo = copy.current();
+  // Each step pops an entry, so this bounds the loop.
+  let steps = copy['locationHistory'].length + Object.values(tabHistory).reduce((n, ris) => n + ris.length, 0);
+  while (routeInfo?.pushedByRoute && steps-- > 0) {
+    const prevInfo = copy.findLastLocation(routeInfo);
+    if (!prevInfo) {
+      break;
+    }
+    pathnames.push(prevInfo.pathname);
+    copy.add({ ...prevInfo, routeAction: 'pop', routeDirection: 'back' });
+    routeInfo = prevInfo;
+  }
+  return pathnames;
+};
+
 export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildren<IonRouterProps>) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -720,15 +750,11 @@ export const IonRouter = ({ children, registerHistoryListener }: PropsWithChildr
     findViewItemByPathname: viewStack.current.findViewItemByPathname,
     getChildrenToRender: viewStack.current.getChildrenToRender,
     getViewItemsForOutlet: viewStack.current.getViewItemsForOutlet.bind(viewStack.current),
-    getBackHistoryPathnames: () => {
-      const { entries, index } = browserHistory.current;
-      const pathnames = entries.slice(0, index).map((e) => e.pathname);
-      // After browser back and forward, the Ionic back target can be ahead
-      // of the current browser entry, so keep it as well.
-      const routeInfo = locationHistory.current.current();
-      const prevInfo = routeInfo?.pushedByRoute ? locationHistory.current.findLastLocation(routeInfo) : undefined;
-      return prevInfo ? [...pathnames, prevInfo.pathname] : pathnames;
-    },
+    getBackHistoryPathnames: () =>
+      getBackHistoryPathnames(
+        locationHistory.current,
+        browserHistory.current.entries.slice(0, browserHistory.current.index).map((e) => e.pathname)
+      ),
     goBack: () => handleNavigateBack(),
     createViewItem: viewStack.current.createViewItem,
     findViewItemByRouteInfo: viewStack.current.findViewItemByRouteInfo,

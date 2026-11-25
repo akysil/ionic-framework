@@ -452,6 +452,49 @@ test.describe('Replace History Entries', () => {
   });
 
   /**
+   * Successive Ionic backs can return to pages outside the earlier browser
+   * entries. A replace keeps all of them mounted.
+   *
+   * Flow: a1 -> a2 -> a3 -> a4 -> tab B -> tab A -> browser back -> browser go(-2) -> a3 -> replace a4 -> back -> a3 -> back -> a2
+   */
+  test('replace should keep the pages that successive ionic backs return to mounted', async ({ page }) => {
+    const a2 = page.locator('div.ion-page[data-pageid="replace-tabs-a2"]');
+
+    await page.goto(withTestingMode('/replace-tabs/a'));
+    await ionPageVisible(page, 'replace-tabs-a1');
+    await page.locator('#go-to-a2').click();
+    await ionPageVisible(page, 'replace-tabs-a2');
+    await a2.evaluate((el) => el.setAttribute('data-marker', 'a2'));
+    await page.locator('#go-to-a3').click();
+    await ionPageVisible(page, 'replace-tabs-a3');
+    await page.locator('#go-to-a4').click();
+    await ionPageVisible(page, 'replace-tabs-a4');
+
+    await ionTabClick(page, 'Tab B');
+    await ionPageVisible(page, 'replace-tabs-b1');
+    await ionTabClick(page, 'Tab A');
+    await ionPageVisible(page, 'replace-tabs-a4');
+
+    await page.goBack();
+    await page.waitForTimeout(500);
+    await page.evaluate(() => window.history.go(-2));
+    await page.waitForTimeout(500);
+    await ionPageVisible(page, 'replace-tabs-a3');
+
+    await page.locator('#replace-to-a4').click();
+    await ionPageVisible(page, 'replace-tabs-a4');
+    // Let the deferred cleanup run before checking that a2 is still there.
+    await page.waitForTimeout(500);
+    await ionPageHidden(page, 'replace-tabs-a2');
+
+    await ionBackClick(page, 'replace-tabs-a4');
+    await ionPageVisible(page, 'replace-tabs-a3');
+    await ionBackClick(page, 'replace-tabs-a3');
+    await ionPageVisible(page, 'replace-tabs-a2');
+    await expect(a2).toHaveAttribute('data-marker', 'a2');
+  });
+
+  /**
    * A forward push to a <Navigate replace> route replaces only the redirect
    * entry, so the page that pushed it stays mounted.
    *
